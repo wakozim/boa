@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 import ctypes
-from enum import IntEnum, Enum, auto
-from typing import Union
+from enum import IntEnum, auto
+from typing import Union, List, Any, Tuple
 
 
 # ----------------------------
@@ -12,6 +12,8 @@ from typing import Union
 
 Float = ctypes.c_float
 Int = ctypes.c_int
+VoidPtr = ctypes.c_void_p
+UInt = ctypes.c_uint
 Bool = ctypes.c_bool
 CharPtr = ctypes.c_char_p
 Char = ctypes.c_char
@@ -34,83 +36,185 @@ raylib = ctypes.cdll.LoadLibrary(raylib_path)
 #   Structures declarations
 # ---------------------------
 
+
+# Vector2, 2 components
 class Vector2(ctypes.Structure):
     _fields_ = [
-        ("x", Float),
-        ("y", Float)
+        ('x', Float),   # Vector x component
+        ('y', Float)    # Vector y component
     ]
 
     def __str__(self) -> str:
         return f'<Vector2 x={self.x}, y={self.y}>'
 
     def __bool__(self) -> bool:
-        return self.x != 0 and self.y != 0
+        return self.x != 0 or self.y != 0
 
     def __add__(self, value: Vector2) -> Vector2:
         if isinstance(value, Vector2):
             return vector2_add(self, value)
-    
+
     def __sub__(self, value: Union[Vector2, float]) -> Vector2:
         if isinstance(value, Vector2):
             return vector2_subtract(self, value)
         elif isinstance(value, float) or isinstance(value, int):
-            return vector2_subtract_value(self, ctypes.c_float(value))
+            return vector2_subtract_value(self, value)
 
     def __mul__(self, value: Union[Vector2, float]) -> Vector2:
         if isinstance(value, Vector2):
             return vector2_multiply(self, value)
         elif isinstance(value, float) or isinstance(value, int):
-            return vector2_scale(self, ctypes.c_float(value))
+            return vector2_scale(self, value)
 
-    def __eq__(self, vector: Vector2) -> bool:
-        if isinstance(vector, Vector2):
-            return vector.x == self.x and vector.y == self.y
-        else:
-            return False
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Vector2):
+            return NotImplemented
+        return other.x == self.x and other.y == self.y
 
 
+# Vector3, 3 components
+class Vector3(ctypes.Structure):
+    _fields_ = [
+        ('x', Float),   # Vector x component
+        ('y', Float),   # Vector y component
+        ('z', Float)    # Vector z component
+    ]
+
+
+# Vector4, 4 components
+class Vector4(ctypes.Structure):
+    _fields_ = [
+        ('x', Float),   # Vector x component
+        ('y', Float),   # Vector y component
+        ('z', Float),   # Vector z component
+        ('w', Float)    # Vector w component
+    ]
+
+
+# Quaternion, 4 components (Vector4 alias)
+Quaternion = Vector4;
+
+
+# Matrix, 4x4 components, column major, OpenGL style, right-handed
+'''
+class Matrix:
+    float m0, m4, m8, m12;  // Matrix first row (4 components)
+    float m1, m5, m9, m13;  // Matrix second row (4 components)
+    float m2, m6, m10, m14; // Matrix third row (4 components)
+    float m3, m7, m11, m15; // Matrix fourth row (4 components)
+'''
+
+
+# Color, 4 components, R8G8B8A8 (32bit)
 class Color(ctypes.Structure):
     _fields_ = [
-        ("r", Char),
-        ("g", Char),
-        ("b", Char),
-        ("a", Char)
+        ("r", Char),    # Color red value
+        ("g", Char),    # Color green value
+        ("b", Char),    # Color blue value
+        ("a", Char)     # Color aplha value
     ]
 
 
 # Colors
 # TODO: Maybe create enum for it?
-LIGHTGRAY  = Color( 200, 200, 200, 255 )   # Light Gray
-GRAY       = Color( 130, 130, 130, 255 )   # Gray
-DARKGRAY   = Color( 80, 80, 80, 255 )      # Dark Gray
-YELLOW     = Color( 253, 249, 0, 255 )     # Yellow
-GOLD       = Color( 255, 203, 0, 255 )     # Gold
-ORANGE     = Color( 255, 161, 0, 255 )     # Orange
-PINK       = Color( 255, 109, 194, 255 )   # Pink
-RED        = Color( 230, 41, 55, 255 )     # Red
-MAROON     = Color( 190, 33, 55, 255 )     # Maroon
-GREEN      = Color( 0, 228, 48, 255 )      # Green
-LIME       = Color( 0, 158, 47, 255 )      # Lime
-DARKGREEN  = Color( 0, 117, 44, 255 )      # Dark Green
-SKYBLUE    = Color( 102, 191, 255, 255 )   # Sky Blue
-BLUE       = Color( 0, 121, 241, 255 )     # Blue
-DARKBLUE   = Color( 0, 82, 172, 255 )      # Dark Blue
-PURPLE     = Color( 200, 122, 255, 255 )   # Purple
-VIOLET     = Color( 135, 60, 190, 255 )    # Violet
-DARKPURPLE = Color( 112, 31, 126, 255 )    # Dark Purple
-BEIGE      = Color( 211, 176, 131, 255 )   # Beige
-BROWN      = Color( 127, 106, 79, 255 )    # Brown
-DARKBROWN  = Color( 76, 63, 47, 255 )      # Dark Brown
-WHITE      = Color( 255, 255, 255, 255 )   # White
-BLACK      = Color( 0, 0, 0, 255 )         # Black
-BLANK      = Color( 0, 0, 0, 0 )           # Blank (Transparent)
-MAGENTA    = Color( 255, 0, 255, 255 )     # Magenta
-RAYWHITE   = Color( 245, 245, 245, 255 )   # White (raylib logo)
+LIGHTGRAY  = Color(200, 200, 200, 255)   # Light Gray
+GRAY       = Color(130, 130, 130, 255)   # Gray
+DARKGRAY   = Color(80, 80, 80, 255)      # Dark Gray
+YELLOW     = Color(253, 249, 0, 255)     # Yellow
+GOLD       = Color(255, 203, 0, 255)     # Gold
+ORANGE     = Color(255, 161, 0, 255)     # Orange
+PINK       = Color(255, 109, 194, 255)   # Pink
+RED        = Color(230, 41, 55, 255)     # Red
+MAROON     = Color(190, 33, 55, 255)     # Maroon
+GREEN      = Color(0, 228, 48, 255)      # Green
+LIME       = Color(0, 158, 47, 255)      # Lime
+DARKGREEN  = Color(0, 117, 44, 255)      # Dark Green
+SKYBLUE    = Color(102, 191, 255, 255)   # Sky Blue
+BLUE       = Color(0, 121, 241, 255)     # Blue
+DARKBLUE   = Color(0, 82, 172, 255)      # Dark Blue
+PURPLE     = Color(200, 122, 255, 255)   # Purple
+VIOLET     = Color(135, 60, 190, 255)    # Violet
+DARKPURPLE = Color(112, 31, 126, 255)    # Dark Purple
+BEIGE      = Color(211, 176, 131, 255)   # Beige
+BROWN      = Color(127, 106, 79, 255)    # Brown
+DARKBROWN  = Color(76, 63, 47, 255)      # Dark Brown
+WHITE      = Color(255, 255, 255, 255)   # White
+BLACK      = Color(0, 0, 0, 255)         # Black
+BLANK      = Color(0, 0, 0, 0)           # Blank (Transparent)
+MAGENTA    = Color(255, 0, 255, 255)     # Magenta
+RAYWHITE   = Color(245, 245, 245, 255)   # White (raylib logo)
+
+
+# Rectangle, 4 components
+class Rectangle(ctypes.Structure):
+    _fields_ = [
+        ('x', Float),       # Rectangle top-left corner position x
+        ('y', Float),       # Rectangle top-left corner position y
+        ('width', Float),   # Rectangle width
+        ('height', Float)   # Rectangle height
+    ]
+
+
+# Image, pixel data stored in CPU memory (RAM)
+class Image(ctypes.Structure):
+    _fields_ = [
+        ('data', VoidPtr),  # Image raw data
+        ('width', Int),     # Image base width
+        ('height', Int),    # Image base height
+        ('mipmaps', Int),   # Mipmap levels, 1 by default
+        ('format', Int)     # Data format (PixelFormat type)
+    ]
+
+
+# Texture, tex data stored in GPU memory (VRAM)
+class Texture(ctypes.Structure):
+    _fields_ = [
+        ("id", Int),        # OpenGL texture id
+        ("width", Int),     # Texture base width
+        ("height", Int),    # Texture base height
+        ("mipmaps", Int),   # Mipmap levels, 1 by default
+        ("format", Int)     # Data format (PixelFormat type)
+    ]
+
+
+# Texture2D, same as Texture
+Texture2D = Texture
+
+
+# TextureCubemap, same as Texture
+TextureCubemap = Texture
+
+
+# RenderTexture, fbo for texture rendering
+class RenderTexture(ctypes.Structure):
+    _fields_ = [
+        ("id", Int),            # OpenGL framebuffer object id
+        ("texture", Texture),   # Color buffer attachment texture
+        ("depth", Texture)      # Depth buffer attachment texture
+    ]
+
+
+RenderTexture2D = RenderTexture
 
 
 # ----------------------
 #   Enums declarations
 # ----------------------
+
+class TextureFilter(IntEnum):
+    # No filter, just pixel approximation
+    POINT = auto(0),
+    # Linear filtering
+    BILINEAR = auto(),
+    # Trilinear filtering (linear with mipmaps)
+    TRILINEAR = auto(),
+    # Anisotropic filtering 4x
+    ANISOTROPIC_4X = auto(),
+    # Anisotropic filtering 8x
+    ANISOTROPIC_8X = auto(),
+    # Anisotropic filtering 16x
+    ANISOTROPIC_16X = auto(),
+
 
 class TraceLogLevel(IntEnum):
     # Display all logs
@@ -253,7 +357,8 @@ class KeyboardKey(IntEnum):
 #  Functions declarations
 # ------------------------
 
-def _wrapper(func: int, result_type, *args_types):
+
+def _wrapper(func, result_type, *args_types):
     func.argtypes = args_types
     func.restype = result_type
     return func
@@ -276,11 +381,29 @@ _DrawRectangleV = _wrapper(raylib.DrawRectangleV, None, Vector2, Vector2, Color)
 _GetFrameTime = _wrapper(raylib.GetFrameTime, Float)
 _IsKeyPressed = _wrapper(raylib.IsKeyPressed, Bool, Int)
 _SetTraceLogLevel = _wrapper(raylib.SetTraceLogLevel, None, Int)
+_LoadRenderTexture = _wrapper(raylib.LoadRenderTexture, RenderTexture, Int, Int)
+_BeginTextureMode = _wrapper(raylib.BeginTextureMode, None, RenderTexture2D)
+_EndTextureMode = _wrapper(raylib.EndTextureMode, None)
+# Draw a Texture2D
+_DrawTexture = _wrapper(raylib.DrawTexture, None, Texture2D, Int, Int, Color)
+# Draw a Texture2D with extended parameters
+_DrawTextureEx = _wrapper(raylib.DrawTextureEx, None, Texture2D, Vector2, Float, Float, Color)
+# Set texture scaling filter mode
+_SetTextureFilter = _wrapper(raylib.SetTextureFilter, None, Texture2D, Int)
+# Draw a part of a texture defined by a rectangle with 'pro' parameters
+_DrawTexturePro = _wrapper(raylib.DrawTexturePro, None, Texture2D, Rectangle, Rectangle, Vector2, Float, Color)
 
+
+def load_render_texture(width: int, height: int) -> RenderTexture:
+    return _LoadRenderTexture(int(width), int(height))
 
 
 def set_trace_log_level(level: int) -> None:
     _SetTraceLogLevel(level)
+
+
+def set_texture_filter(texture: Texture, filter_: int) -> None:
+    _SetTextureFilter(texture, int(filter_))
 
 
 def init_window(width: int, height: int, title: str) -> None:
@@ -291,8 +414,20 @@ def close_window() -> None:
     _CloseWindow()
 
 
-def draw_rectangle(x, y, width, height, color) -> None:
+def draw_rectangle(x: int, y: int, width: int, height: int, color: Color) -> None:
     _DrawRectangle(int(x), int(y), int(width), int(height), color)
+
+
+def draw_texture(texture: Texture2D, x: int, y: int, tint: Color) -> None:
+    _DrawTexture(texture, int(x), int(y), tint)
+
+
+def draw_texture_ex(texture: Texture2D, position: Vector2, rotation: float, scale: float, tint: Color):
+    _DrawTextureEx(texture, position, float(rotation), float(scale), tint)
+
+
+def draw_texture_pro(texture: Texture2D, source: Rectangle, dest: Rectangle, origin: Vector2, rotation: float, tint: Color):
+    _DrawTexturePro(texture, source, dest, origin, float(rotation), tint)
 
 
 def draw_rectangle_v(position: Vector2, size: Vector2, color: Color) -> None:
@@ -309,6 +444,22 @@ def window_should_close() -> bool:
 
 def begin_drawing() -> None:
     _BeginDrawing()
+
+
+def begin_texture_mode(texture: RenderTexture2D) -> None:
+    _BeginTextureMode(texture)
+
+
+def end_texture_mode() -> None:
+    _EndTextureMode()
+
+
+def get_screen_width() -> int:
+    return _GetScreenWidth()
+
+
+def get_screen_height() -> int:
+    return _GetScreenHeight()
 
 
 def clear_background(color: Color) -> None:
@@ -358,10 +509,9 @@ def vector2_scale(vec: Vector2, scale: float) -> Vector2:
     return _Vector2Scale(vec, scale)
 
 
-def vector2_subtract(vec1: Vector2, vec2: float) -> Vector2:
+def vector2_subtract(vec1: Vector2, vec2: Vector2) -> Vector2:
     return _Vector2Subtract(vec1, vec2)
 
 
 def vector2_subtract_value(vec: Vector2, value: float) -> Vector2:
     return _Vector2SubtractValue(vec, value)
-
