@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
+import sys
 import ctypes
+from ctypes import wintypes
 from enum import IntEnum, auto
 from typing import Union, List, Any, Tuple
 
@@ -23,12 +25,25 @@ Char = ctypes.c_char
 #   Load raylib
 # ---------------
 
-raylib_path = os.path.join(
-        os.path.dirname(__file__),
-        "raylib-5.5_linux_amd64",
-        "lib",
-        "libraylib.so"
-)
+if sys.platform == 'linux':
+    raylib_path = os.path.join(
+            os.path.dirname(__file__),
+            "raylib-5.5_linux_amd64",
+            "lib",
+            "libraylib.so"
+    )
+elif sys.platform == 'win32':
+    # WARNING: I've only tested it with wine.
+    # It may not work in real conditions.
+    raylib_path = os.path.join(
+            os.path.dirname(__file__),
+            "raylib-5.5_win64_msvc16",
+            "lib",
+            "raylib.dll"
+    )
+else:
+    raise RuntimeError('Unsupported platform')
+
 raylib = ctypes.cdll.LoadLibrary(raylib_path)
 
 
@@ -366,7 +381,8 @@ def _wrapper(func, result_type, *args_types):
 
 # raylib.h functions bindings
 
-_ColorFromHVS = _wrapper(raylib.ColorFromHSV, Color, Float, Float, Float)
+_DrawFPS = _wrapper(raylib.DrawFPS, None, Int, Int)
+_ColorFromHSV = _wrapper(raylib.ColorFromHSV, Color, Float, Float, Float)
 _SetTargetFPS = _wrapper(raylib.SetTargetFPS, None, Int)
 _InitWindow = _wrapper(raylib.InitWindow, None, Int, Int, CharPtr)
 _CloseWindow = _wrapper(raylib.CloseWindow, None)
@@ -392,6 +408,14 @@ _DrawTextureEx = _wrapper(raylib.DrawTextureEx, None, Texture2D, Vector2, Float,
 _SetTextureFilter = _wrapper(raylib.SetTextureFilter, None, Texture2D, Int)
 # Draw a part of a texture defined by a rectangle with 'pro' parameters
 _DrawTexturePro = _wrapper(raylib.DrawTexturePro, None, Texture2D, Rectangle, Rectangle, Vector2, Float, Color)
+
+
+def draw_fps(x: int, y: int) -> None:
+    _DrawFPS(int(x), int(y))
+
+
+def color_from_hsv(hue: float, saturation: float, value: float) -> Color:
+    return _ColorFromHSV(float(hue), float(saturation), float(value))
 
 
 def load_render_texture(width: int, height: int) -> RenderTexture:
