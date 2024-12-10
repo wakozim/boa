@@ -60,26 +60,69 @@ class Vector2(ctypes.Structure):
     ]
 
     def __str__(self) -> str:
-        return f'<Vector2 x={self.x}, y={self.y}>'
+        return f'({self.x} {self.y})'
+
+    def __repr__(self) -> str:
+        return f'Vector2({self.x}, {self.y})'
 
     def __bool__(self) -> bool:
         return self.x != 0 or self.y != 0
 
-    def __add__(self, value: Vector2) -> Vector2:
-        if isinstance(value, Vector2):
-            return vector2_add(self, value)
+    def __add__(self, other: Vector2) -> Vector2:
+        if isinstance(other, Vector2):
+            return vector2_add(self, other)
+        elif isinstance(other, int) or isinstance(other, float):
+            return vector2_add_value(self, other)
+        else:
+            return NotImplemented
+
+    def __radd__(self, other: Vector2) -> Vector2:
+        if isinstance(other, Vector2):
+            return vector2_add(self, other)
+        elif isinstance(other, int) or isinstance(other, float):
+            return vector2_add_value(self, other)
+        else:
+            return NotImplemented
 
     def __sub__(self, value: Union[Vector2, float]) -> Vector2:
         if isinstance(value, Vector2):
             return vector2_subtract(self, value)
         elif isinstance(value, float) or isinstance(value, int):
             return vector2_subtract_value(self, value)
+        else:
+            return NotImplemented
+
+    def __rsub__(self, value: Union[Vector2, float]) -> Vector2:
+        if isinstance(value, Vector2):
+            return vector2_subtract(self, value)
+        elif isinstance(value, float) or isinstance(value, int):
+            return vector2_subtract_value(self, value)
+        else:
+            return NotImplemented
 
     def __mul__(self, value: Union[Vector2, float]) -> Vector2:
         if isinstance(value, Vector2):
             return vector2_multiply(self, value)
         elif isinstance(value, float) or isinstance(value, int):
             return vector2_scale(self, value)
+        else:
+            return NotImplemented
+
+    def __rmul__(self, value: Union[Vector2, float]) -> Vector2:
+        if isinstance(value, Vector2):
+            return vector2_multiply(self, value)
+        elif isinstance(value, float) or isinstance(value, int):
+            return vector2_scale(self, value)
+        else:
+            return NotImplemented
+
+    def __truediv__(self, other) -> Vector2:
+        if isinstance(other, Vector2):
+            return vector2_divide(self, other)
+        elif isinstance(other, float) or isinstance(other, int):
+            return Vector2(self.x / other, self.y / other)
+        else:
+            return NotImplemented
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Vector2):
@@ -126,7 +169,7 @@ class Color(ctypes.Structure):
         ("r", Char),    # Color red value
         ("g", Char),    # Color green value
         ("b", Char),    # Color blue value
-        ("a", Char)     # Color aplha value
+        ("a", Char)     # Color alpha value
     ]
 
 
@@ -394,12 +437,19 @@ _GetScreenHeight = _wrapper(raylib.GetScreenHeight, Int)
 _ClearBackground = _wrapper(raylib.ClearBackground, None, Color)
 _DrawRectangle = _wrapper(raylib.DrawRectangle, None, Int, Int, Int, Int, Color)
 _DrawRectangleV = _wrapper(raylib.DrawRectangleV, None, Vector2, Vector2, Color)
+_DrawLineEx = _wrapper(raylib.DrawLineEx, None, Vector2, Vector2, Float, Color)
 _GetFrameTime = _wrapper(raylib.GetFrameTime, Float)
 _IsKeyPressed = _wrapper(raylib.IsKeyPressed, Bool, Int)
 _SetTraceLogLevel = _wrapper(raylib.SetTraceLogLevel, None, Int)
 _LoadRenderTexture = _wrapper(raylib.LoadRenderTexture, RenderTexture, Int, Int)
 _BeginTextureMode = _wrapper(raylib.BeginTextureMode, None, RenderTexture2D)
 _EndTextureMode = _wrapper(raylib.EndTextureMode, None)
+# Draw text (using default font)
+# RLAPI void DrawText(const char *text, int posX, int posY, int fontSize, Color color);
+_DrawText = _wrapper(raylib.DrawText, None, CharPtr, Int, Int, Int, Color)
+# Measure string width for default font
+# RLAPI int MeasureText(const char *text, int fontSize);
+_MeasureText = _wrapper(raylib.MeasureText, Int, CharPtr, Int)
 # Draw a Texture2D
 _DrawTexture = _wrapper(raylib.DrawTexture, None, Texture2D, Int, Int, Color)
 # Draw a Texture2D with extended parameters
@@ -408,6 +458,12 @@ _DrawTextureEx = _wrapper(raylib.DrawTextureEx, None, Texture2D, Vector2, Float,
 _SetTextureFilter = _wrapper(raylib.SetTextureFilter, None, Texture2D, Int)
 # Draw a part of a texture defined by a rectangle with 'pro' parameters
 _DrawTexturePro = _wrapper(raylib.DrawTexturePro, None, Texture2D, Rectangle, Rectangle, Vector2, Float, Color)
+# RLAPI void DrawCircleV(Vector2 center, float radius, Color color)
+# Draw a color-filled circle (Vector version)
+_DrawCircleV = _wrapper(raylib.DrawCircleV, None, Vector2, Float, Color)
+# RLAPI Color ColorAlpha(Color color, float alpha)
+# Get color with alpha applied, alpha goes from 0.0f to 1.0f
+_ColorAlpha = _wrapper(raylib.ColorAlpha, Color, Color, Float)
 
 
 def draw_fps(x: int, y: int) -> None:
@@ -442,6 +498,18 @@ def draw_rectangle(x: int, y: int, width: int, height: int, color: Color) -> Non
     _DrawRectangle(int(x), int(y), int(width), int(height), color)
 
 
+def draw_line_ex(start_pos: Vector2, end_pos: Vector2, thick: float, color: Color):
+    _DrawLineEx(start_pos, end_pos, float(thick), color)
+
+
+def draw_text(text: str, x: int, y: int, font_size: int, color: Color) -> None:
+    _DrawText(text.encode('UTF-8'), int(x), int(y), int(font_size), color)
+
+
+def measure_text(text: str, font_size: int) -> int:
+    return _MeasureText(text.encode('UTF-8'), int(font_size))
+
+
 def draw_texture(texture: Texture2D, x: int, y: int, tint: Color) -> None:
     _DrawTexture(texture, int(x), int(y), tint)
 
@@ -456,6 +524,10 @@ def draw_texture_pro(texture: Texture2D, source: Rectangle, dest: Rectangle, ori
 
 def draw_rectangle_v(position: Vector2, size: Vector2, color: Color) -> None:
     _DrawRectangleV(position, size, color)
+
+
+def draw_circle_v(position: Vector2, radius: float, color: Color) -> None:
+    _DrawCircleV(position, float(radius), color)
 
 
 def set_target_fps(fps: int) -> None:
@@ -502,9 +574,14 @@ def is_key_pressed(key: int) -> None:
     return _IsKeyPressed(int(key))
 
 
+def color_alpha(color: Color, alpha: float) -> Color:
+    return _ColorAlpha(color, float(alpha))
+
+
 # raymath.h functions bindings
 
 _Vector2Add = _wrapper(raylib.Vector2Add, Vector2, Vector2, Vector2)
+_Vector2Divide = _wrapper(raylib.Vector2Divide, Vector2, Vector2, Vector2)
 _Vector2Lerp = _wrapper(raylib.Vector2Lerp, Vector2, Vector2, Vector2, Float)
 _Vector2Multiply = _wrapper(raylib.Vector2Multiply, Vector2, Vector2, Vector2)
 _Vector2Scale = _wrapper(raylib.Vector2Scale, Vector2, Vector2, Float)
@@ -523,6 +600,10 @@ def vector2_multiply(vec1: Vector2, vec2: Vector2) -> Vector2:
 
 def vector2_add(vec1: Vector2, vec2: Vector2) -> Vector2:
     return _Vector2Add(vec1, vec2)
+
+
+def vector2_divide(vec1: Vector2, vec2: Vector2) -> Vector2:
+    return _Vector2Divide(vec1, vec2)
 
 
 def vector2_lerp(vec1: Vector2, vec2: Vector2, amount: float) -> Vector2:
